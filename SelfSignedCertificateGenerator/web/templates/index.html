@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNS Certificate Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">CNS Certificate Manager</h1>
+        
+        <!-- Certificate Generation -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Generate New Certificate</h2>
+            <div class="flex gap-4">
+                <input type="number" id="validityDays" value="365" min="1" max="3650"
+                    class="border rounded px-3 py-2 w-32">
+                <button onclick="generateCertificate()"
+                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Generate Certificate
+                </button>
+            </div>
+        </div>
+        
+        <!-- Certificate List -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">Certificates</h2>
+            <div id="certificateList" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch and display certificates
+        async function loadCertificates() {
+            try {
+                const response = await fetch('/api/certificates');
+                const certificates = await response.json();
+                
+                const listElement = document.getElementById('certificateList');
+                listElement.innerHTML = certificates.map(cert => `
+                    <div class="border rounded p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-semibold">${cert.filename}</h3>
+                                <p class="text-sm text-gray-600">Subject: ${cert.info.subject}</p>
+                                <p class="text-sm text-gray-600">Valid until: ${cert.info.validity.not_after}</p>
+                            </div>
+                            <div class="space-x-2">
+                                <button onclick="downloadCertificate('${cert.filename}')"
+                                    class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600">
+                                    Download
+                                </button>
+                                <button onclick="revokeCertificate('${cert.filename}')"
+                                    class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">
+                                    Revoke
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading certificates:', error);
+            }
+        }
+
+        // Generate new certificate
+        async function generateCertificate() {
+            try {
+                const validityDays = document.getElementById('validityDays').value;
+                const response = await fetch('/api/certificates/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ validity_days: parseInt(validityDays) })
+                });
+                
+                if (response.ok) {
+                    loadCertificates();
+                } else {
+                    const error = await response.json();
+                    alert('Error generating certificate: ' + error.error);
+                }
+            } catch (error) {
+                console.error('Error generating certificate:', error);
+            }
+        }
+
+        // Download certificate
+        function downloadCertificate(filename) {
+            window.location.href = `/api/certificates/download/${filename}`;
+        }
+
+        // Revoke certificate
+        async function revokeCertificate(filename) {
+            if (!confirm('Are you sure you want to revoke this certificate?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/certificates/revoke/${filename}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    loadCertificates();
+                } else {
+                    const error = await response.json();
+                    alert('Error revoking certificate: ' + error.error);
+                }
+            } catch (error) {
+                console.error('Error revoking certificate:', error);
+            }
+        }
+
+        // Initial load
+        loadCertificates();
+    </script>
+</body>
+</html>

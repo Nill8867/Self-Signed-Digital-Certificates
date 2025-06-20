@@ -1,0 +1,15 @@
+{
+  "name": "cns-digital-certificate-generator",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate-certs": "bash cert_generator.sh",
+    "start-server": "python server/tls_server.py",
+    "start-client": "cd client && python tls_client.py",
+    "start-web": "python web/app.py"
+  },
+  "dependencies": {
+    "blessed": "^0.1.81"
+  }
+}
